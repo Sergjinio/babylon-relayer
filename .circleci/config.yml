@@ -21,19 +21,21 @@ jobs:
       - go/mod-download
       - go/save-cache:
           key: go-mod-v6-{{ checksum "go.sum" }}
-          path: "/home/circleci/.go_workspace/pkg/mod"
+          paths:
+            - /home/circleci/.go_workspace/pkg/mod
       - run:
           name: Build
           command: make build
       - run:
-          name: Lint
+          name: Install golangci-lint
           command: |
             curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.55.2
-            ./bin/golangci-lint run
+      - run:
+          name: Lint
+          command: ./bin/golangci-lint run
       - run:
           name: Run tests
-          command: |
-            make test
+          command: make test
 
   build_docker:
     machine:
@@ -49,7 +51,7 @@ jobs:
           tag: "$CIRCLE_SHA1,$CIRCLE_TAG"
           repo: "babylon-relayer"
       - run:
-          name: Save Docker image to export it to workspace
+          name: Save Docker image to workspace
           command: |
             docker save $(docker image ls --format '{{.Repository}}:{{.Tag}}') > /tmp/babylon-relayer.tar
       - persist_to_workspace:
@@ -66,8 +68,7 @@ jobs:
           at: /tmp
       - run:
           name: Load Docker image from workspace
-          command: |
-            docker load -i /tmp/babylon-relayer.tar
+          command: docker load -i /tmp/babylon-relayer.tar
       - aws-ecr/ecr-login:
           aws-access-key-id: AWS_ACCESS_KEY_ID
           aws-secret-access-key: AWS_SECRET_ACCESS_KEY
